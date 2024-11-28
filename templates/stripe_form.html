@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<h1>Checkout</h1>
+
+<h2>Cart Summary</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Price</th>
+            <th>Subtotal</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in cart_items %}
+            <tr>
+                <td>{{ item.product.name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>${{ item.product.price }}</td>
+                <td>${{ item.sub_total }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h3>Total: RS.{{ total }}</h3>
+
+<!-- Checkout Form -->
+<form action="{% url 'create_checkout_session' cart_id=cart.id %}" method="POST">
+    {% csrf_token %}
+    <button type="submit" id="checkout-button">Checkout with Stripe</button>
+</form>
+
+<script>
+    // The button that triggers the checkout session creation
+    var stripe = Stripe("{{ STRIPE_PUBLIC_KEY }}");  // Ensure you add your public key here
+
+    var checkoutButton = document.getElementById("checkout-button");
+
+    checkoutButton.addEventListener("click", function (event) {
+        // Prevent the form from submitting
+        event.preventDefault();
+
+        // Redirect to the checkout session
+        fetch("{% url 'create_checkout_session' cart_id=cart.id %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": document.querySelector('[name="csrfmiddlewaretoken"]').value
+            }
+        })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (sessionId) {
+            // Use Stripe.js to redirect to the checkout page
+            return stripe.redirectToCheckout({ sessionId: sessionId });
+        })
+        .then(function (result) {
+            if (result.error) {
+                alert(result.error.message);
+            }
+        })
+        .catch(function (error) {
+            console.error("Error:", error);
+            alert("Something went wrong.");
+        });
+    });
+</script>
+
+{% endblock  %}
+source env/bin/activate
